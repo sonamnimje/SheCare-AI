@@ -1,3 +1,9 @@
+# SMTP Configuration for password reset emails
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+EMAIL_SENDER=your_email@gmail.com
 # Database Configuration
 # Choose one: sqlite, postgresql, mysql
 DATABASE_TYPE=sqlite

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import Login from "./pages/Login";
+// ...existing code...
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import PCOSChecker from "./pages/PCOSChecker";
@@ -256,6 +257,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+            // ...existing code...
           <Route path="/signup" element={<Signup />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Body
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
@@ -21,6 +22,16 @@ except ImportError:
 import json
 
 app = FastAPI()
+
+from routes import auth
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to SheCare-AI Backend!"}
+
+# Include routers
+app.include_router(auth.router)
 
 # Allow CORS for frontend development
 app.add_middleware(
@@ -378,4 +389,17 @@ def delete_profile(
 ):
     db.delete(current_user)
     db.commit()
-    return {"message": "Profile deleted successfully"} 
+    return {"message": "Profile deleted successfully"}
+
+# --- Forgot Password ---
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+@app.post("/auth/forgot-password")
+def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User with this email not found.")
+    # Here you would generate a reset token and send email
+    # For now, just return a success message
+    return {"message": "If this email exists, a password reset link will be sent."}

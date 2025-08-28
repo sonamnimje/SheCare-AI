@@ -45,6 +45,9 @@ const Login = () => {
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: "100%", padding: 10, borderRadius: 6, border: "1px solid #ccc" }} disabled={loading} />
         </div>
         <button type="submit" style={{ width: "100%", background: "#d72660", color: "#fff", border: "none", borderRadius: 6, padding: 12, fontSize: 16, cursor: "pointer", marginBottom: 12 }} disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
+        <div style={{ textAlign: "center", marginBottom: 10 }}>
+          <Link to="/forgot-password" style={{ color: "#d72660", textDecoration: "underline" }}>Forgot Password?</Link>
+        </div>
         <div style={{ textAlign: "center", color: "#555" }}>
           Don't have an account? <Link to="/signup" style={{ color: "#d72660" }}>Sign up</Link>
         </div>

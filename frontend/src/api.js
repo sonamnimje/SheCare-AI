@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Use environment variable for backend base URL
-const BASE_URL = "https://shecare-ai-ax9t.onrender.com";
+const BASE_URL = "http://localhost:8000";
 
 // Create an axios instance
 const api = axios.create({
@@ -66,6 +66,13 @@ export const getJournalEntries = async () => {
 // Recommendations
 export const getRecommendations = async () => {
   const response = await api.get("/recommendations");
+  return response.data;
+};
+
+// Forgot Password
+export const forgotPassword = async ({ email }) => {
+  // Adjust endpoint as per backend implementation
+  const response = await api.post("/auth/forgot-password", { email });
   return response.data;
 };
 

@@ -4,6 +4,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
+    # SMTP settings
+    SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+    SMTP_USER = os.getenv("SMTP_USER", "your_email@gmail.com")
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "your_app_password")
+    EMAIL_SENDER = os.getenv("EMAIL_SENDER", SMTP_USER)
     # Database settings
     DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite")  # sqlite, postgresql, mysql
     

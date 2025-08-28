@@ -172,6 +172,19 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 # --- API Endpoints ---
 
+# --- Forgot Password ---
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+@app.post("/auth/forgot-password")
+def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User with this email not found.")
+    # Here you would generate a reset token and send email
+    # For now, just return a success message
+    return {"message": "If this email exists, a password reset link will be sent."}
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to SheCare AI API", "version": "1.0.0"}
