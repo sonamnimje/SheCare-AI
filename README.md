@@ -93,7 +93,7 @@ OMNIDIM_API_KEY=your_omnidimension_api_key
   ```bash
   cd backend/app
   app\venv\Scripts\activate
-  uvicorn app.app:app --reload
+  python -m uvicorn app.app:app --reload
   ```
   The API will be available at `http://localhost:8000`.
 
