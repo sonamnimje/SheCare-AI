@@ -23,7 +23,7 @@ import json
 
 app = FastAPI()
 
-from routes import auth
+from app.routes import auth
 
 
 @app.get("/")
@@ -56,12 +56,20 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    full_name: str = None
+    full_name: Optional[str] = None
+    age: Optional[int] = None
+    weight: Optional[int] = None
+    cycle_length: Optional[int] = None
+    bio: Optional[str] = None
 
 class UserOut(BaseModel):
     id: int
     email: EmailStr
-    full_name: str = None
+    full_name: Optional[str] = None
+    age: Optional[int] = None
+    weight: Optional[int] = None
+    cycle_length: Optional[int] = None
+    bio: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -73,9 +81,13 @@ class TokenData(BaseModel):
     user_id: int = None
 
 class UserUpdate(BaseModel):
-    full_name: str = None
-    email: EmailStr = None
-    password: str = None
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    age: Optional[int] = None
+    weight: Optional[int] = None
+    cycle_length: Optional[int] = None
+    bio: Optional[str] = None
 
 # Utility functions for JWT
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -115,7 +127,15 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered.")
     hashed_pw = pwd_context.hash(user.password)
-    db_user = User(email=user.email, hashed_password=hashed_pw, full_name=user.full_name)
+    db_user = User(
+        email=user.email, 
+        hashed_password=hashed_pw, 
+        full_name=user.full_name,
+        age=user.age,
+        weight=user.weight,
+        cycle_length=user.cycle_length,
+        bio=user.bio
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -142,14 +162,37 @@ def read_users_me(current_user: User = Depends(get_current_user)):
 
 # --- User Dashboard ---
 @app.get("/dashboard")
-def dashboard(current_user: User = Depends(get_current_user)):
-    # Example personalized data; expand as needed
+def dashboard(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Fetch real data from database
+    latest_cycle = db.query(CycleEntry).filter(CycleEntry.user_id == current_user.id).order_by(CycleEntry.start_date.desc()).first()
+    latest_journal = db.query(JournalEntry).filter(JournalEntry.user_id == current_user.id).order_by(JournalEntry.date.desc()).first()
+    latest_pcos = db.query(PCOSCheck).filter(PCOSCheck.user_id == current_user.id).order_by(PCOSCheck.date.desc()).first()
+
+    # Calculate cycle day number
+    cycle_day = "-"
+    if latest_cycle and latest_cycle.start_date:
+        try:
+            # Parse the start date
+            start_date = latest_cycle.start_date
+            if isinstance(start_date, str):
+                start_date = datetime.fromisoformat(start_date)
+            
+            # Calculate days since start
+            today = datetime.utcnow()
+            diff = (today - start_date).days
+            cycle_day = str(diff + 1) if diff >= 0 else "-"
+        except Exception as e:
+            print(f"Error calculating cycle day: {e}")
+            cycle_day = "-"
+
     return {
         "id": current_user.id,
         "name": current_user.full_name or current_user.email.split("@")[0],
-        "cycleDay": "-",  # Placeholder, replace with real data
-        "mood": "-",      # Placeholder, replace with real data
-        "pcosRisk": "-"   # Placeholder, replace with real data
+        "cycle_day": latest_cycle.start_date.strftime("%Y-%m-%d") if latest_cycle and latest_cycle.start_date else None,
+        "cycleDay": cycle_day,
+        "mood": latest_journal.mood if latest_journal and latest_journal.mood else "-",
+        "pcos_risk": latest_pcos.risk if latest_pcos and latest_pcos.risk else None,
+        "pcosRisk": latest_pcos.risk if latest_pcos and latest_pcos.risk else "-"
     }
 
 # --- PCOS Risk Checker ---
@@ -234,11 +277,27 @@ def get_pcos_checks(
         ) for chk in checks
     ]
 
+@app.delete("/pcos-checker/{pcos_id}")
+def delete_pcos_check(
+    pcos_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    entry = db.query(PCOSCheck).filter(
+        PCOSCheck.id == pcos_id,
+        PCOSCheck.user_id == current_user.id
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="PCOS check not found.")
+    db.delete(entry)
+    db.commit()
+    return {"message": "PCOS check deleted."}
+
 # --- Cycle Tracker ---
 class CycleEntryIn(BaseModel):
-    start_date: datetime
-    end_date: datetime = None
-    notes: str = None
+    start_date: str  # Accept date string like "2024-01-15"
+    end_date: Optional[str] = None
+    notes: Optional[str] = None
 
 class CycleEntryOut(BaseModel):
     id: int
@@ -254,10 +313,14 @@ def add_cycle_entry(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Convert date strings to datetime objects
+    start_date = datetime.fromisoformat(entry.start_date)
+    end_date = datetime.fromisoformat(entry.end_date) if entry.end_date else None
+    
     db_entry = CycleEntry(
         user_id=current_user.id,
-        start_date=entry.start_date,
-        end_date=entry.end_date,
+        start_date=start_date,
+        end_date=end_date,
         notes=entry.notes
     )
     db.add(db_entry)
@@ -272,6 +335,22 @@ def get_cycle_entries(
 ):
     entries = db.query(CycleEntry).filter(CycleEntry.user_id == current_user.id).order_by(CycleEntry.start_date.desc()).all()
     return entries
+
+@app.delete("/cycle-tracker/{entry_id}")
+def delete_cycle_entry(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    entry = db.query(CycleEntry).filter(
+        CycleEntry.id == entry_id,
+        CycleEntry.user_id == current_user.id
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Cycle entry not found.")
+    db.delete(entry)
+    db.commit()
+    return {"message": "Cycle entry deleted."}
 
 # --- Journal ---
 class JournalEntryIn(BaseModel):
@@ -315,6 +394,22 @@ def get_journal_entries(
     entries = db.query(JournalEntry).filter(JournalEntry.user_id == current_user.id).order_by(JournalEntry.date.desc()).all()
     return entries
 
+@app.delete("/journal/{journal_id}")
+def delete_journal_entry(
+    journal_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    entry = db.query(JournalEntry).filter(
+        JournalEntry.id == journal_id,
+        JournalEntry.user_id == current_user.id
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Journal entry not found.")
+    db.delete(entry)
+    db.commit()
+    return {"message": "Journal entry deleted."}
+
 # --- Chatbot ---
 @app.post("/chatbot")
 def chatbot():
@@ -330,15 +425,172 @@ class RecommendationOut(BaseModel):
     class Config:
         from_attributes = True
 
+@app.get("/recommendations/public")
+def get_public_recommendations():
+    """Public recommendations that don't require authentication"""
+    current_time = datetime.utcnow()
+    return [
+        {
+            "id": 1,
+            "type": "general",
+            "text": "Stay hydrated and listen to your body today.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 2,
+            "type": "wellness",
+            "text": "Your body needs rest — take it slow and breathe.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 3,
+            "type": "nutrition",
+            "text": "Eat fresh, move gently, and love yourself today.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 4,
+            "type": "mood",
+            "text": "Mood dips detected — try journaling or light meditation.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 5,
+            "type": "cycle",
+            "text": "Your cycle is approaching — prep with warm teas and comfort foods.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 6,
+            "type": "nutrition",
+            "text": "Avoid junk food today for better energy and mood.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 7,
+            "type": "wellness",
+            "text": "Try 10 minutes of gentle yoga or stretching to ease tension.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 8,
+            "type": "nutrition",
+            "text": "Include healthy fats like avocado and nuts in your meals today.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 9,
+            "type": "mood",
+            "text": "Start your day with 5 minutes of gratitude journaling.",
+            "date": current_time.isoformat()
+        },
+        {
+            "id": 10,
+            "type": "wellness",
+            "text": "Aim for 7-9 hours of quality sleep tonight for better recovery.",
+            "date": current_time.isoformat()
+        }
+    ]
+
 @app.get("/recommendations", response_model=List[RecommendationOut])
 def get_recommendations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Return user-specific and global recommendations
-    user_recs = db.query(Recommendation).filter(Recommendation.user_id == current_user.id).all()
+    recs = []
+
+    # 1. Cycle Tracker Data
+    latest_cycle = db.query(CycleEntry).filter(CycleEntry.user_id == current_user.id).order_by(CycleEntry.start_date.desc()).first()
+    if latest_cycle:
+        recs.append(RecommendationOut(
+            id=1001, type="cycle", text="Your period started on {}. Remember to track your symptoms!".format(latest_cycle.start_date.strftime("%b %d")),
+            date=latest_cycle.start_date
+        ))
+
+    # 2. Journal Data
+    latest_journal = db.query(JournalEntry).filter(JournalEntry.user_id == current_user.id).order_by(JournalEntry.date.desc()).first()
+    if latest_journal and "sad" in latest_journal.mood.lower():
+        recs.append(RecommendationOut(
+            id=1002, type="mood", text="We noticed a low mood entry. Try some self-care or journaling today! 😊",
+            date=latest_journal.date
+        ))
+
+    # 3. PCOS Checker Data
+    latest_pcos = db.query(PCOSCheck).filter(PCOSCheck.user_id == current_user.id).order_by(PCOSCheck.date.desc()).first()
+    if latest_pcos and latest_pcos.risk == "High":
+        recs.append(RecommendationOut(
+            id=1003, type="pcos", text="Your recent PCOS check suggests high risk. Consider consulting a specialist. 🩺",
+            date=latest_pcos.date
+        ))
+
+    # Add global recommendations from database
     global_recs = db.query(Recommendation).filter(Recommendation.user_id == None).all()
-    return user_recs + global_recs
+    for i, global_rec in enumerate(global_recs):
+        recs.append(RecommendationOut(
+            id=2000 + i,
+            type=global_rec.type,
+            text=global_rec.text,
+            date=global_rec.date
+        ))
+
+    # If still no recommendations, add some default ones
+    if not recs:
+        current_time = datetime.utcnow()
+        default_recs = [
+            RecommendationOut(
+                id=3001, type="general", 
+                text="Stay hydrated and listen to your body today.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3002, type="wellness", 
+                text="Your body needs rest — take it slow and breathe.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3003, type="nutrition", 
+                text="Eat fresh, move gently, and love yourself today.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3004, type="mood", 
+                text="Start your day with 5 minutes of gratitude journaling.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3005, type="cycle", 
+                text="Track your cycle regularly to understand your body better.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3006, type="wellness", 
+                text="Try 10 minutes of gentle yoga or stretching to ease tension.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3007, type="nutrition", 
+                text="Include healthy fats like avocado and nuts in your meals today.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3008, type="mood", 
+                text="Connect with a friend or family member for emotional support.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3009, type="wellness", 
+                text="Take a 20-minute walk in nature to boost your mood.",
+                date=current_time
+            ),
+            RecommendationOut(
+                id=3010, type="nutrition", 
+                text="Drink herbal teas like chamomile or peppermint for relaxation.",
+                date=current_time
+            )
+        ]
+        recs.extend(default_recs)
+
+    return recs
 
 # --- Admin Endpoints ---
 @app.get("/admin/analytics")
@@ -367,6 +619,7 @@ def update_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Update fields if they are provided
     if update.full_name is not None:
         current_user.full_name = update.full_name
     if update.email is not None:
@@ -377,6 +630,14 @@ def update_profile(
         current_user.email = update.email
     if update.password is not None:
         current_user.hashed_password = pwd_context.hash(update.password)
+    if update.age is not None:
+        current_user.age = update.age
+    if update.weight is not None:
+        current_user.weight = update.weight
+    if update.cycle_length is not None:
+        current_user.cycle_length = update.cycle_length
+    if update.bio is not None:
+        current_user.bio = update.bio
     
     db.commit()
     db.refresh(current_user)

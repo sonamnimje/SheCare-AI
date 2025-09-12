@@ -31,41 +31,62 @@ export const loginUser = async (credentials) => {
 
 // Get current user profile
 export const getProfile = async () => {
-  const response = await api.get("/users/me");
+  const token = localStorage.getItem("shecare_token");
+  const response = await api.get("/profile", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   return response.data;
 };
 
 // PCOS Checker
 export const checkPCOS = async (data) => {
-  const response = await api.post("/check_pcos", data);
+  const token = localStorage.getItem("shecare_token");
+  const response = await api.post("/pcos-checker", data, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   return response.data;
 };
 
 // Cycle Tracker
 export const createCycleEntry = async (data) => {
-  const response = await api.post("/cycle", data);
+  const token = localStorage.getItem("shecare_token");
+  const response = await api.post("/cycle-tracker", data, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   return response.data;
 };
 
 export const getCycleHistory = async () => {
-  const response = await api.get("/cycle");
+  const token = localStorage.getItem("shecare_token");
+  const response = await api.get("/cycle-tracker", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   return response.data;
 };
 
 // Journal
 export const createJournalEntry = async (data) => {
-  const response = await api.post("/journal", data);
+  const token = localStorage.getItem("shecare_token");
+  const response = await api.post("/journal", data, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   return response.data;
 };
 
 export const getJournalEntries = async () => {
-  const response = await api.get("/journal");
+  const token = localStorage.getItem("shecare_token");
+  const response = await api.get("/journal", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   return response.data;
 };
 
 // Recommendations
 export const getRecommendations = async () => {
-  const response = await api.get("/recommendations");
+  const token = localStorage.getItem("shecare_token");
+  const response = await api.get("/recommendations", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   return response.data;
 };
 

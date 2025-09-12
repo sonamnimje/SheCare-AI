@@ -118,8 +118,10 @@ const CycleTracker = () => {
     setLoading(true);
     setError("");
     const token = localStorage.getItem("shecare_token");
+    // Convert to ISO 8601 datetime string (YYYY-MM-DDT00:00:00)
+    const isoDate = toIsoDate(startDate);
     const payload = {
-      start_date: toIsoDate(startDate),
+      start_date: isoDate.length === 10 ? `${isoDate}T00:00:00` : isoDate,
       end_date: null,
       notes: ""
     };

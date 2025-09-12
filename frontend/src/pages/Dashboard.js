@@ -23,7 +23,10 @@ const Dashboard = () => {
   useEffect(() => {
     setLoading(true);
     setError("");
-    api.get("/dashboard")
+    const token = localStorage.getItem("shecare_token");
+    api.get("/dashboard", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
       .then(res => setData(res.data))
       .catch(() => setError("Failed to load dashboard data."))
       .finally(() => setLoading(false));
