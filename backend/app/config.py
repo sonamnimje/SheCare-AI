@@ -17,7 +17,7 @@ class Settings:
     
     # If a full DATABASE_URL is provided, infer DATABASE_TYPE to avoid sqlite-specific engine args
     if RAW_DATABASE_URL:
-        if RAW_DATABASE_URL.startswith("postgres"):
+        if RAW_DATABASE_URL.startswith("postgres://") or RAW_DATABASE_URL.startswith("postgresql://"):
             DATABASE_TYPE = "postgresql"
         elif RAW_DATABASE_URL.startswith("mysql"):
             DATABASE_TYPE = "mysql"
@@ -51,9 +51,17 @@ class Settings:
     def DATABASE_URL(self):
         # Use full env var if present
         if self.RAW_DATABASE_URL:
-            return self.RAW_DATABASE_URL
+            url = self.RAW_DATABASE_URL
+            # Normalize postgres scheme to psycopg3 driver if driver not specified
+            if url.startswith("postgres://"):
+                # Render sometimes sets postgres:// which SQLAlchemy warns about
+                url = "postgresql+psycopg://" + url.split("://", 1)[1]
+            elif url.startswith("postgresql://") and "+" not in url.split("://", 1)[0]:
+                # Upgrade to explicit psycopg driver
+                url = "postgresql+psycopg://" + url.split("://", 1)[1]
+            return url
         if self.DATABASE_TYPE == "postgresql":
-            return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            return f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         elif self.DATABASE_TYPE == "mysql":
             return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
         else:
