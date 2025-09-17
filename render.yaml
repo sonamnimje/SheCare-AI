@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: shecare-backend
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.app:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shecare-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_TYPE
+        value: postgresql
+
+databases:
+  - name: shecare-db
+    plan: free

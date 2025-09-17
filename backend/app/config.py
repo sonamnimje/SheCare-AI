@@ -11,7 +11,19 @@ class Settings:
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "your_app_password")
     EMAIL_SENDER = os.getenv("EMAIL_SENDER", SMTP_USER)
     # Database settings
+    # Allow overriding via full DATABASE_URL if provided (Render/Heroku style)
+    RAW_DATABASE_URL = os.getenv("DATABASE_URL")
     DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite")  # sqlite, postgresql, mysql
+    
+    # If a full DATABASE_URL is provided, infer DATABASE_TYPE to avoid sqlite-specific engine args
+    if RAW_DATABASE_URL:
+        if RAW_DATABASE_URL.startswith("postgres"):
+            DATABASE_TYPE = "postgresql"
+        elif RAW_DATABASE_URL.startswith("mysql"):
+            DATABASE_TYPE = "mysql"
+        else:
+            # leave as is
+            pass
     
     # SQLite settings
     SQLITE_DATABASE_URL = "sqlite:///./shecare.db"
@@ -37,6 +49,9 @@ class Settings:
     
     @property
     def DATABASE_URL(self):
+        # Use full env var if present
+        if self.RAW_DATABASE_URL:
+            return self.RAW_DATABASE_URL
         if self.DATABASE_TYPE == "postgresql":
             return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         elif self.DATABASE_TYPE == "mysql":
