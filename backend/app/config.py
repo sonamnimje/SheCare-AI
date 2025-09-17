@@ -59,6 +59,9 @@ class Settings:
                 url = "postgresql+pg8000://" + url.split("://", 1)[1]
             return url
         if self.DATABASE_TYPE == "postgresql":
+            # If no managed DB provided (still localhost defaults), fall back to SQLite to avoid crash
+            if not os.getenv("DATABASE_URL") and self.POSTGRES_HOST == "localhost":
+                return self.SQLITE_DATABASE_URL
             return f"postgresql+pg8000://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         elif self.DATABASE_TYPE == "mysql":
             return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
