@@ -236,7 +236,7 @@ function App() {
                 </button>
               </div>
               <iframe
-                src="https://www.omnidim.io/voice-widget?secret=d23dc04eb6eef81dfaa93ec2a3bb09cb"
+                src="https://www.omnidim.io/voice-widget?secret=94ae2ba5895ad68ae11e0ab075462b4d"
                 width="100%"
                 height="100%"
                 style={{

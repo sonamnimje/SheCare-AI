@@ -23,7 +23,7 @@ import json
 
 app = FastAPI()
 
-from app.routes import auth
+from app.routes import auth, voice_agent
 
 
 @app.get("/")
@@ -32,6 +32,8 @@ def read_root():
 
 # Include routers
 app.include_router(auth.router)
+# Voice agent routes
+app.include_router(voice_agent.router, prefix="/voice", tags=["voice"]) 
 
 # Allow CORS for frontend development
 app.add_middleware(
