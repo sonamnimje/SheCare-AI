@@ -21,7 +21,7 @@
 **SheCare AI** is a comprehensive women's health management platform designed to empower users with intelligent tools for tracking menstrual cycles, assessing PCOS risk, maintaining health journals, and receiving AI-powered health guidance. This full-stack web application combines modern frontend technologies with robust backend services to deliver a seamless user experience.
 
 ### Live Demo
-- **Live Application**: [https://shecare-ai-1-5jqe.onrender.com/](https://shecare-ai-1-5jqe.onrender.com/)
+- **Live Application**: https://she-care-ai-7rwe.vercel.app/
 - **Demo Video**: [YouTube](https://youtu.be/gU0lN3_8I-I)
 
 ---
@@ -427,6 +427,6 @@ The **SheCare AI** platform stands as a testament to the power of technology in 
 
 **Technologies**: React.js, FastAPI, SQLite, JWT  
 
-**Deployment**: Render Cloud Platform  
+**Deployment**: Vercel Cloud Platform  
 
 **Repository**: [GitHub - SheCare-AI](https://github.com/sonamnimje/SheCare-AI)
