@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import Login from "./pages/Login";
@@ -134,6 +134,83 @@ const Feature = ({ icon, title }) => (
 
 function App() {
   const [showVoiceWidget, setShowVoiceWidget] = useState(false);
+  const [voiceWidgetError, setVoiceWidgetError] = useState(null);
+  const [voiceWidgetLoading, setVoiceWidgetLoading] = useState(true);
+  const [micPermissionStatus, setMicPermissionStatus] = useState(null);
+  const iframeTimeoutRef = useRef(null);
+
+  // Check microphone permissions
+  const checkMicrophonePermission = async () => {
+    try {
+      if (navigator.permissions) {
+        const result = await navigator.permissions.query({ name: 'microphone' });
+        setMicPermissionStatus(result.state);
+        return result.state === 'granted';
+      } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Fallback: try to access microphone
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+        setMicPermissionStatus('granted');
+        return true;
+      }
+      return null; // Can't check
+    } catch (error) {
+      setMicPermissionStatus('denied');
+      return false;
+    }
+  };
+
+  // Request microphone permission
+  const requestMicrophonePermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+      setMicPermissionStatus('granted');
+      return true;
+    } catch (error) {
+      setMicPermissionStatus('denied');
+      setVoiceWidgetError("Microphone permission is required for the voice agent. Please allow microphone access in your browser settings.");
+      return false;
+    }
+  };
+
+  // Monitor iframe loading state
+  useEffect(() => {
+    if (showVoiceWidget && voiceWidgetLoading) {
+      // Additional check: if iframe loads but doesn't trigger onLoad
+      const checkInterval = setInterval(() => {
+        const iframe = document.querySelector('iframe[title="SheCare Voice Agent"]');
+        if (iframe && iframe.contentWindow) {
+          try {
+            // Try to access iframe content (will fail if cross-origin, which is expected)
+            // But if we can check it exists, it might be loaded
+            if (iframe.contentDocument || iframe.contentWindow.document) {
+              console.log("Iframe appears to be loaded");
+              if (iframeTimeoutRef.current) {
+                clearTimeout(iframeTimeoutRef.current);
+                iframeTimeoutRef.current = null;
+              }
+              setVoiceWidgetLoading(false);
+              clearInterval(checkInterval);
+            }
+          } catch (e) {
+            // Cross-origin error is expected, ignore it
+          }
+        }
+      }, 1000);
+
+      return () => clearInterval(checkInterval);
+    }
+  }, [showVoiceWidget, voiceWidgetLoading]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (iframeTimeoutRef.current) {
+        clearTimeout(iframeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #ffe0ec 0%, #f8f9fa 100%)" }}>
@@ -142,7 +219,33 @@ function App() {
 
         {/* Microphone Icon Button */}
         <button
-          onClick={() => setShowVoiceWidget(true)}
+          onClick={async () => {
+            setShowVoiceWidget(true);
+            setVoiceWidgetError(null);
+            setVoiceWidgetLoading(true);
+            
+            // Check and request microphone permission
+            const hasPermission = await checkMicrophonePermission();
+            if (hasPermission === false) {
+              const granted = await requestMicrophonePermission();
+              if (!granted) {
+                setVoiceWidgetLoading(false);
+                return;
+              }
+            }
+            
+            // Set a timeout in case iframe doesn't load
+            if (iframeTimeoutRef.current) {
+              clearTimeout(iframeTimeoutRef.current);
+            }
+            iframeTimeoutRef.current = setTimeout(() => {
+              // Only show error if still loading
+              if (voiceWidgetLoading) {
+                setVoiceWidgetLoading(false);
+                setVoiceWidgetError("Voice agent is taking too long to load. The service might be unavailable or your connection is slow. Please try again or check your internet connection.");
+              }
+            }, 20000); // 20 second timeout (increased from 10)
+          }}
           style={{
             position: "fixed",
             bottom: 110,
@@ -170,7 +273,11 @@ function App() {
         {showVoiceWidget && (
           <>
             <div
-              onClick={() => setShowVoiceWidget(false)}
+              onClick={() => {
+                setShowVoiceWidget(false);
+                setVoiceWidgetError(null);
+                setVoiceWidgetLoading(true);
+              }}
               style={{
                 position: "fixed",
                 top: 0,
@@ -221,7 +328,11 @@ function App() {
                   <span>SheCare Voice Agent</span>
                 </div>
                 <button
-                  onClick={() => setShowVoiceWidget(false)}
+                  onClick={() => {
+                    setShowVoiceWidget(false);
+                    setVoiceWidgetError(null);
+                    setVoiceWidgetLoading(true);
+                  }}
                   style={{
                     background: "transparent",
                     border: "none",
@@ -235,19 +346,154 @@ function App() {
                   ×
                 </button>
               </div>
-              <iframe
-                src="https://www.omnidim.io/voice-widget?secret=94ae2ba5895ad68ae11e0ab075462b4d"
-                width="100%"
-                height="100%"
-                style={{
-                  border: "none",
-                  borderRadius: "0 0 16px 16px",
-                  flex: 1,
-                  minHeight: 0
-                }}
-                allow="microphone"
-                title="SheCare Voice Agent"
-              />
+              {voiceWidgetError ? (
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 40,
+                    textAlign: "center",
+                    color: "#666"
+                  }}
+                >
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>🎤</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: "#d72660" }}>
+                    Voice Agent Error
+                  </div>
+                  <div style={{ fontSize: 14, marginBottom: 20 }}>
+                    {voiceWidgetError}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#999", marginBottom: 20, maxWidth: 280 }}>
+                    Troubleshooting tips:
+                    <ul style={{ textAlign: "left", marginTop: 8, paddingLeft: 20 }}>
+                      <li>Check your internet connection</li>
+                      <li>Try refreshing the page</li>
+                      <li>Check browser console for errors</li>
+                      <li>Verify microphone permissions</li>
+                    </ul>
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      onClick={() => {
+                        setVoiceWidgetError(null);
+                        setVoiceWidgetLoading(true);
+                        // Reset and retry
+                        if (iframeTimeoutRef.current) {
+                          clearTimeout(iframeTimeoutRef.current);
+                        }
+                        iframeTimeoutRef.current = setTimeout(() => {
+                          if (voiceWidgetLoading) {
+                            setVoiceWidgetLoading(false);
+                            setVoiceWidgetError("Voice agent is taking too long to load. The service might be unavailable or your connection is slow. Please try again or check your internet connection.");
+                          }
+                        }, 20000);
+                      }}
+                      style={{
+                        background: "#d72660",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 8,
+                        padding: "10px 20px",
+                        fontSize: 14,
+                        cursor: "pointer",
+                        fontWeight: 600
+                      }}
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={() => {
+                        window.open("https://omnidim.io/voice-widget?secret=8b7c769b68400c46338749c7ef868d3e", "_blank");
+                      }}
+                      style={{
+                        background: "transparent",
+                        color: "#d72660",
+                        border: "2px solid #d72660",
+                        borderRadius: 8,
+                        padding: "10px 20px",
+                        fontSize: 14,
+                        cursor: "pointer",
+                        fontWeight: 600
+                      }}
+                    >
+                      Open in New Tab
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+                  {voiceWidgetLoading && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 12,
+                        zIndex: 10
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          border: "4px solid #ffe0ec",
+                          borderTop: "4px solid #d72660",
+                          borderRadius: "50%",
+                          animation: "spin 1s linear infinite"
+                        }}
+                      />
+                      <div style={{ color: "#d72660", fontSize: 14, fontWeight: 500 }}>
+                        Loading Voice Agent...
+                      </div>
+                    </div>
+                  )}
+                  <iframe
+                    src="https://omnidim.io/voice-widget?secret=8b7c769b68400c46338749c7ef868d3e"
+                    width="100%"
+                    height="100%"
+                    style={{
+                      border: "none",
+                      borderRadius: "0 0 16px 16px",
+                      flex: 1,
+                      minHeight: 0,
+                      opacity: voiceWidgetLoading ? 0 : 1,
+                      transition: "opacity 0.3s",
+                      position: "relative",
+                      zIndex: 1,
+                      backgroundColor: "#fff"
+                    }}
+                    allow="microphone *; autoplay *; camera *"
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                    onLoad={(e) => {
+                      console.log("Voice widget iframe loaded successfully");
+                      if (iframeTimeoutRef.current) {
+                        clearTimeout(iframeTimeoutRef.current);
+                        iframeTimeoutRef.current = null;
+                      }
+                      setVoiceWidgetLoading(false);
+                      setVoiceWidgetError(null);
+                    }}
+                    onError={(e) => {
+                      console.error("Voice widget iframe error:", e);
+                      if (iframeTimeoutRef.current) {
+                        clearTimeout(iframeTimeoutRef.current);
+                        iframeTimeoutRef.current = null;
+                      }
+                      setVoiceWidgetLoading(false);
+                      setVoiceWidgetError("Failed to load voice agent. Please check your internet connection and try again.");
+                    }}
+                    title="SheCare Voice Agent"
+                  />
+                </div>
+              )}
             </div>
           </>
         )}
