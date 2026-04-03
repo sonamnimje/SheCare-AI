@@ -15,10 +15,14 @@ import Recommendations from "./pages/Recommendations";
 import AdminPanel from "./pages/AdminPanel";
 import Profile from "./pages/Profile";
 import OmniTextChatbot from "./pages/OmniTextChatbot";
+import Shop from "./pages/Shop";
 
 const NavBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  if (location.pathname === "/shop") {
+    return null;
+  }
   const handleLogout = () => {
     localStorage.removeItem("shecare_user");
     localStorage.removeItem("shecare_token");
@@ -31,6 +35,7 @@ const NavBar = () => {
     { to: "/cycle-tracker", label: "Cycle Tracker" },
     { to: "/journal", label: "Journal" },
     { to: "/recommendations", label: "Recommendations" },
+    { to: "/shop", label: "Shop" },
   ];
   return (
     <nav
@@ -136,7 +141,7 @@ function App() {
   const [showVoiceWidget, setShowVoiceWidget] = useState(false);
   const [voiceWidgetError, setVoiceWidgetError] = useState(null);
   const [voiceWidgetLoading, setVoiceWidgetLoading] = useState(true);
-  const [micPermissionStatus, setMicPermissionStatus] = useState(null);
+  const [, setMicPermissionStatus] = useState(null);
   const iframeTimeoutRef = useRef(null);
 
   // Check microphone permissions
@@ -213,314 +218,336 @@ function App() {
   }, []);
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #ffe0ec 0%, #f8f9fa 100%)" }}>
-      <Router>
-        <NavBar />
-
-        {/* Microphone Icon Button */}
-        <button
-          onClick={async () => {
-            setShowVoiceWidget(true);
-            setVoiceWidgetError(null);
-            setVoiceWidgetLoading(true);
-            
-            // Check and request microphone permission
-            const hasPermission = await checkMicrophonePermission();
-            if (hasPermission === false) {
-              const granted = await requestMicrophonePermission();
-              if (!granted) {
-                setVoiceWidgetLoading(false);
-                return;
-              }
-            }
-            
-            // Set a timeout in case iframe doesn't load
-            if (iframeTimeoutRef.current) {
-              clearTimeout(iframeTimeoutRef.current);
-            }
-            iframeTimeoutRef.current = setTimeout(() => {
-              // Only show error if still loading
-              if (voiceWidgetLoading) {
-                setVoiceWidgetLoading(false);
-                setVoiceWidgetError("Voice agent is taking too long to load. The service might be unavailable or your connection is slow. Please try again or check your internet connection.");
-              }
-            }, 20000); // 20 second timeout (increased from 10)
-          }}
-          style={{
-            position: "fixed",
-            bottom: 110,
-            right: 32,
-            background: "#fff",
-            color: "#d72660",
-            border: "2px solid #d72660",
-            borderRadius: "50%",
-            width: 56,
-            height: 56,
-            boxShadow: "0 2px 8px rgba(215,38,96,0.12)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 28,
-            cursor: "pointer",
-            zIndex: 1001
-          }}
-          title="Open Voice Agent"
-        >
-          <span role="img" aria-label="Microphone">🎤</span>
-        </button>
-
-        {/* Modal for Voice Agent */}
-        {showVoiceWidget && (
-          <>
-            <div
-              onClick={() => {
-                setShowVoiceWidget(false);
-                setVoiceWidgetError(null);
-                setVoiceWidgetLoading(true);
-              }}
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100vw",
-                height: "100vh",
-                background: "rgba(0,0,0,0.25)",
-                zIndex: 1999
-              }}
-            />
-            <div
-              style={{
-                position: "fixed",
-                top: 80,
-                right: 40,
-                width: 340,
-                height: 480,
-                maxWidth: "95vw",
-                maxHeight: "90vh",
-                background: "#ffe0ec",
-                borderRadius: 16,
-                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-                zIndex: 2000,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "stretch",
-                border: "1px solid #eee",
-                padding: 0,
-                overflow: "hidden"
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "12px 20px",
-                  background: "#d72660",
-                  color: "#fff",
-                  borderTopLeftRadius: 16,
-                  borderTopRightRadius: 16,
-                  fontWeight: 600,
-                  fontSize: 20
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <img src="/logo1.png" alt="SheCare Logo" style={{ width: 60, height: 60, borderRadius: "50%" }} />
-                  <span>SheCare Voice Agent</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowVoiceWidget(false);
-                    setVoiceWidgetError(null);
-                    setVoiceWidgetLoading(true);
-                  }}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    fontSize: 28,
-                    color: "#fff",
-                    cursor: "pointer",
-                    marginLeft: 8
-                  }}
-                  title="Close"
-                >
-                  ×
-                </button>
-              </div>
-              {voiceWidgetError ? (
-                <div
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: 40,
-                    textAlign: "center",
-                    color: "#666"
-                  }}
-                >
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>🎤</div>
-                  <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: "#d72660" }}>
-                    Voice Agent Error
-                  </div>
-                  <div style={{ fontSize: 14, marginBottom: 20 }}>
-                    {voiceWidgetError}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#999", marginBottom: 20, maxWidth: 280 }}>
-                    Troubleshooting tips:
-                    <ul style={{ textAlign: "left", marginTop: 8, paddingLeft: 20 }}>
-                      <li>Check your internet connection</li>
-                      <li>Try refreshing the page</li>
-                      <li>Check browser console for errors</li>
-                      <li>Verify microphone permissions</li>
-                    </ul>
-                  </div>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <button
-                      onClick={() => {
-                        setVoiceWidgetError(null);
-                        setVoiceWidgetLoading(true);
-                        // Reset and retry
-                        if (iframeTimeoutRef.current) {
-                          clearTimeout(iframeTimeoutRef.current);
-                        }
-                        iframeTimeoutRef.current = setTimeout(() => {
-                          if (voiceWidgetLoading) {
-                            setVoiceWidgetLoading(false);
-                            setVoiceWidgetError("Voice agent is taking too long to load. The service might be unavailable or your connection is slow. Please try again or check your internet connection.");
-                          }
-                        }, 20000);
-                      }}
-                      style={{
-                        background: "#d72660",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: 8,
-                        padding: "10px 20px",
-                        fontSize: 14,
-                        cursor: "pointer",
-                        fontWeight: 600
-                      }}
-                    >
-                      Retry
-                    </button>
-                    <button
-                      onClick={() => {
-                        window.open("https://omnidim.io/web_widget.js?secret_key=6561779da9e4d1df0383c9dae0d26d65", "_blank");
-                      }}
-                      style={{
-                        background: "transparent",
-                        color: "#d72660",
-                        border: "2px solid #d72660",
-                        borderRadius: 8,
-                        padding: "10px 20px",
-                        fontSize: 14,
-                        cursor: "pointer",
-                        fontWeight: 600
-                      }}
-                    >
-                      Open in New Tab
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-                  {voiceWidgetLoading && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 12,
-                        zIndex: 10
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 40,
-                          height: 40,
-                          border: "4px solid #ffe0ec",
-                          borderTop: "4px solid #d72660",
-                          borderRadius: "50%",
-                          animation: "spin 1s linear infinite"
-                        }}
-                      />
-                      <div style={{ color: "#d72660", fontSize: 14, fontWeight: 500 }}>
-                        Loading Voice Agent...
-                      </div>
-                    </div>
-                  )}
-                  <iframe
-                    src="https://omnidim.io/voice-widget?secret=8b7c769b68400c46338749c7ef868d3e"
-                    width="100%"
-                    height="100%"
-                    style={{
-                      border: "none",
-                      borderRadius: "0 0 16px 16px",
-                      flex: 1,
-                      minHeight: 0,
-                      opacity: voiceWidgetLoading ? 0 : 1,
-                      transition: "opacity 0.3s",
-                      position: "relative",
-                      zIndex: 1,
-                      backgroundColor: "#fff"
-                    }}
-                    allow="microphone *; autoplay *; camera *"
-                    allowFullScreen
-                    referrerPolicy="no-referrer-when-downgrade"
-                    onLoad={(e) => {
-                      console.log("Voice widget iframe loaded successfully");
-                      if (iframeTimeoutRef.current) {
-                        clearTimeout(iframeTimeoutRef.current);
-                        iframeTimeoutRef.current = null;
-                      }
-                      setVoiceWidgetLoading(false);
-                      setVoiceWidgetError(null);
-                    }}
-                    onError={(e) => {
-                      console.error("Voice widget iframe error:", e);
-                      if (iframeTimeoutRef.current) {
-                        clearTimeout(iframeTimeoutRef.current);
-                        iframeTimeoutRef.current = null;
-                      }
-                      setVoiceWidgetLoading(false);
-                      setVoiceWidgetError("Failed to load voice agent. Please check your internet connection and try again.");
-                    }}
-                    title="SheCare Voice Agent"
-                  />
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* OmniDimension SheBot floating chat icon */}
-        <OmniTextChatbot />
-
-        {/* Main App Routes */}
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/pcos-checker" element={<PCOSChecker />} />
-          <Route path="/cycle-tracker" element={<CycleTracker />} />
-          <Route path="/journal" element={<Journal />} />
-          {/* <Route path="/chatbot" element={<Chatbot />} /> */}
-          <Route path="/recommendations" element={<Recommendations />} />
-          <Route path="/admin" element={<AdminPanel />} />
-        </Routes>
-      </Router>
-    </div>
+    <Router>
+      <AppContent
+        showVoiceWidget={showVoiceWidget}
+        setShowVoiceWidget={setShowVoiceWidget}
+        voiceWidgetError={voiceWidgetError}
+        setVoiceWidgetError={setVoiceWidgetError}
+        voiceWidgetLoading={voiceWidgetLoading}
+        setVoiceWidgetLoading={setVoiceWidgetLoading}
+        checkMicrophonePermission={checkMicrophonePermission}
+        requestMicrophonePermission={requestMicrophonePermission}
+        iframeTimeoutRef={iframeTimeoutRef}
+      />
+    </Router>
   );
 }
+
+const AppContent = ({
+  showVoiceWidget,
+  setShowVoiceWidget,
+  voiceWidgetError,
+  setVoiceWidgetError,
+  voiceWidgetLoading,
+  setVoiceWidgetLoading,
+  checkMicrophonePermission,
+  requestMicrophonePermission,
+  iframeTimeoutRef,
+}) => {
+  const location = useLocation();
+  const isShopPage = location.pathname === "/shop";
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #ffe0ec 0%, #f8f9fa 100%)" }}>
+      <NavBar />
+
+      <>
+          <button
+            onClick={async () => {
+              setShowVoiceWidget(true);
+              setVoiceWidgetError(null);
+              setVoiceWidgetLoading(true);
+
+              const hasPermission = await checkMicrophonePermission();
+              if (hasPermission === false) {
+                const granted = await requestMicrophonePermission();
+                if (!granted) {
+                  setVoiceWidgetLoading(false);
+                  return;
+                }
+              }
+
+              if (iframeTimeoutRef.current) {
+                clearTimeout(iframeTimeoutRef.current);
+              }
+              iframeTimeoutRef.current = setTimeout(() => {
+                if (voiceWidgetLoading) {
+                  setVoiceWidgetLoading(false);
+                  setVoiceWidgetError("Voice agent is taking too long to load. The service might be unavailable or your connection is slow. Please try again or check your internet connection.");
+                }
+              }, 20000);
+            }}
+            style={{
+              position: "fixed",
+              bottom: 110,
+              right: 32,
+              background: "#fff",
+              color: "#d72660",
+              border: "2px solid #d72660",
+              borderRadius: "50%",
+              width: 56,
+              height: 56,
+              boxShadow: "0 2px 8px rgba(215,38,96,0.12)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              cursor: "pointer",
+              zIndex: 1001
+            }}
+            title="Open Voice Agent"
+          >
+            <span role="img" aria-label="Microphone">🎤</span>
+          </button>
+
+          {showVoiceWidget && (
+            <>
+              <div
+                onClick={() => {
+                  setShowVoiceWidget(false);
+                  setVoiceWidgetError(null);
+                  setVoiceWidgetLoading(true);
+                }}
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "100vw",
+                  height: "100vh",
+                  background: "rgba(0,0,0,0.25)",
+                  zIndex: 1999
+                }}
+              />
+              <div
+                style={{
+                  position: "fixed",
+                  top: 80,
+                  right: 40,
+                  width: 340,
+                  height: 480,
+                  maxWidth: "95vw",
+                  maxHeight: "90vh",
+                  background: "#ffe0ec",
+                  borderRadius: 16,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+                  zIndex: 2000,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "stretch",
+                  border: "1px solid #eee",
+                  padding: 0,
+                  overflow: "hidden"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 20px",
+                    background: "#d72660",
+                    color: "#fff",
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                    fontWeight: 600,
+                    fontSize: 20
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <img src="/logo1.png" alt="SheCare Logo" style={{ width: 60, height: 60, borderRadius: "50%" }} />
+                    <span>SheCare Voice Agent</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowVoiceWidget(false);
+                      setVoiceWidgetError(null);
+                      setVoiceWidgetLoading(true);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      fontSize: 28,
+                      color: "#fff",
+                      cursor: "pointer",
+                      marginLeft: 8
+                    }}
+                    title="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                {voiceWidgetError ? (
+                  <div
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 40,
+                      textAlign: "center",
+                      color: "#666"
+                    }}
+                  >
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>🎤</div>
+                    <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: "#d72660" }}>
+                      Voice Agent Error
+                    </div>
+                    <div style={{ fontSize: 14, marginBottom: 20 }}>
+                      {voiceWidgetError}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#999", marginBottom: 20, maxWidth: 280 }}>
+                      Troubleshooting tips:
+                      <ul style={{ textAlign: "left", marginTop: 8, paddingLeft: 20 }}>
+                        <li>Check your internet connection</li>
+                        <li>Try refreshing the page</li>
+                        <li>Check browser console for errors</li>
+                        <li>Verify microphone permissions</li>
+                      </ul>
+                    </div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        onClick={() => {
+                          setVoiceWidgetError(null);
+                          setVoiceWidgetLoading(true);
+                          if (iframeTimeoutRef.current) {
+                            clearTimeout(iframeTimeoutRef.current);
+                          }
+                          iframeTimeoutRef.current = setTimeout(() => {
+                            if (voiceWidgetLoading) {
+                              setVoiceWidgetLoading(false);
+                              setVoiceWidgetError("Voice agent is taking too long to load. The service might be unavailable or your connection is slow. Please try again or check your internet connection.");
+                            }
+                          }, 20000);
+                        }}
+                        style={{
+                          background: "#d72660",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "10px 20px",
+                          fontSize: 14,
+                          cursor: "pointer",
+                          fontWeight: 600
+                        }}
+                      >
+                        Retry
+                      </button>
+                      <button
+                        onClick={() => {
+                          window.open("https://omnidim.io/web_widget.js?secret_key=6561779da9e4d1df0383c9dae0d26d65", "_blank");
+                        }}
+                        style={{
+                          background: "transparent",
+                          color: "#d72660",
+                          border: "2px solid #d72660",
+                          borderRadius: 8,
+                          padding: "10px 20px",
+                          fontSize: 14,
+                          cursor: "pointer",
+                          fontWeight: 600
+                        }}
+                      >
+                        Open in New Tab
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+                    {voiceWidgetLoading && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          transform: "translate(-50%, -50%)",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 12,
+                          zIndex: 10
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            border: "4px solid #ffe0ec",
+                            borderTop: "4px solid #d72660",
+                            borderRadius: "50%",
+                            animation: "spin 1s linear infinite"
+                          }}
+                        />
+                        <div style={{ color: "#d72660", fontSize: 14, fontWeight: 500 }}>
+                          Loading Voice Agent...
+                        </div>
+                      </div>
+                    )}
+                    <iframe
+                      src="https://omnidim.io/voice-widget?secret=8b7c769b68400c46338749c7ef868d3e"
+                      width="100%"
+                      height="100%"
+                      style={{
+                        border: "none",
+                        borderRadius: "0 0 16px 16px",
+                        flex: 1,
+                        minHeight: 0,
+                        opacity: voiceWidgetLoading ? 0 : 1,
+                        transition: "opacity 0.3s",
+                        position: "relative",
+                        zIndex: 1,
+                        backgroundColor: "#fff"
+                      }}
+                      allow="microphone *; autoplay *; camera *"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      onLoad={() => {
+                        if (iframeTimeoutRef.current) {
+                          clearTimeout(iframeTimeoutRef.current);
+                          iframeTimeoutRef.current = null;
+                        }
+                        setVoiceWidgetLoading(false);
+                        setVoiceWidgetError(null);
+                      }}
+                      onError={() => {
+                        if (iframeTimeoutRef.current) {
+                          clearTimeout(iframeTimeoutRef.current);
+                          iframeTimeoutRef.current = null;
+                        }
+                        setVoiceWidgetLoading(false);
+                        setVoiceWidgetError("Failed to load voice agent. Please check your internet connection and try again.");
+                      }}
+                      title="SheCare Voice Agent"
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {!isShopPage && <OmniTextChatbot />}
+      </>
+
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/pcos-checker" element={<PCOSChecker />} />
+        <Route path="/cycle-tracker" element={<CycleTracker />} />
+        <Route path="/journal" element={<Journal />} />
+        {/* <Route path="/chatbot" element={<Chatbot />} /> */}
+        <Route path="/recommendations" element={<Recommendations />} />
+        <Route path="/shop" element={<Shop />} />
+        <Route path="/admin" element={<AdminPanel />} />
+      </Routes>
+    </div>
+  );
+};
 
 const Landing = () => (
   <div
