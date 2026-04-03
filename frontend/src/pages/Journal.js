@@ -36,15 +36,12 @@ const Journal = () => {
   useEffect(() => {
     setUserLoading(true);
     setUserError("");
-    const token = localStorage.getItem("shecare_token");
-    api.get("/profile", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
+    api.getProfile()
       .then(res => {
         setUserData({
-          age: res.data.age || "",
-          weight: res.data.weight || "",
-          cycleLength: res.data.cycle_length || ""
+          age: res.age || "",
+          weight: res.weight || "",
+          cycleLength: res.cycle_length || ""
         });
       })
       .catch(() => setUserError("Failed to load user data."))

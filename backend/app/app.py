@@ -175,6 +175,59 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+
+def build_default_recommendations(current_time: datetime) -> List[RecommendationOut]:
+    return [
+        RecommendationOut(
+            id=3001,
+            type="general",
+            text="Drink water regularly and keep a bottle nearby so hydration stays easy.",
+            date=current_time,
+        ),
+        RecommendationOut(
+            id=3002,
+            type="wellness",
+            text="Take a 10-minute walk or stretch break to reduce tension and refresh your focus.",
+            date=current_time,
+        ),
+        RecommendationOut(
+            id=3003,
+            type="nutrition",
+            text="Build meals around protein, fiber, and healthy fats to support steadier energy.",
+            date=current_time,
+        ),
+        RecommendationOut(
+            id=3004,
+            type="mood",
+            text="If your mood feels heavy, try a short journal entry or message someone you trust.",
+            date=current_time,
+        ),
+        RecommendationOut(
+            id=3005,
+            type="cycle",
+            text="Track your cycle, symptoms, and flow regularly to spot patterns earlier.",
+            date=current_time,
+        ),
+        RecommendationOut(
+            id=3006,
+            type="wellness",
+            text="Aim for consistent sleep tonight, since rest can help with energy and cycle comfort.",
+            date=current_time,
+        ),
+        RecommendationOut(
+            id=3007,
+            type="pcos",
+            text="If you notice irregular cycles, acne, or persistent symptoms, consider discussing them with a clinician.",
+            date=current_time,
+        ),
+        RecommendationOut(
+            id=3008,
+            type="general",
+            text="Use the journal and profile tools to keep your recommendations more personalized over time.",
+            date=current_time,
+        ),
+    ]
+
 # --- API Endpoints ---
 
 # --- Forgot Password ---
@@ -464,65 +517,12 @@ def get_public_recommendations():
     current_time = datetime.utcnow()
     return [
         {
-            "id": 1,
-            "type": "general",
-            "text": "Stay hydrated and listen to your body today.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 2,
-            "type": "wellness",
-            "text": "Your body needs rest — take it slow and breathe.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 3,
-            "type": "nutrition",
-            "text": "Eat fresh, move gently, and love yourself today.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 4,
-            "type": "mood",
-            "text": "Mood dips detected — try journaling or light meditation.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 5,
-            "type": "cycle",
-            "text": "Your cycle is approaching — prep with warm teas and comfort foods.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 6,
-            "type": "nutrition",
-            "text": "Avoid junk food today for better energy and mood.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 7,
-            "type": "wellness",
-            "text": "Try 10 minutes of gentle yoga or stretching to ease tension.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 8,
-            "type": "nutrition",
-            "text": "Include healthy fats like avocado and nuts in your meals today.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 9,
-            "type": "mood",
-            "text": "Start your day with 5 minutes of gratitude journaling.",
-            "date": current_time.isoformat()
-        },
-        {
-            "id": 10,
-            "type": "wellness",
-            "text": "Aim for 7-9 hours of quality sleep tonight for better recovery.",
-            "date": current_time.isoformat()
+            "id": recommendation.id,
+            "type": recommendation.type,
+            "text": recommendation.text,
+            "date": recommendation.date.isoformat(),
         }
+        for recommendation in build_default_recommendations(current_time)
     ]
 
 @app.get("/recommendations", response_model=List[RecommendationOut])
@@ -531,97 +531,62 @@ def get_recommendations(
     current_user: User = Depends(get_current_user)
 ):
     recs = []
+    existing_keys = set()
+
+    def add_recommendation(recommendation: RecommendationOut):
+        key = (recommendation.type.lower(), recommendation.text.strip().lower())
+        if key in existing_keys:
+            return
+        recs.append(recommendation)
+        existing_keys.add(key)
 
     # 1. Cycle Tracker Data
     latest_cycle = db.query(CycleEntry).filter(CycleEntry.user_id == current_user.id).order_by(CycleEntry.start_date.desc()).first()
     if latest_cycle:
-        recs.append(RecommendationOut(
-            id=1001, type="cycle", text="Your period started on {}. Remember to track your symptoms!".format(latest_cycle.start_date.strftime("%b %d")),
-            date=latest_cycle.start_date
+        add_recommendation(RecommendationOut(
+            id=1001,
+            type="cycle",
+            text="Your period started on {}. Remember to track your symptoms!".format(latest_cycle.start_date.strftime("%b %d")),
+            date=latest_cycle.start_date,
         ))
 
     # 2. Journal Data
     latest_journal = db.query(JournalEntry).filter(JournalEntry.user_id == current_user.id).order_by(JournalEntry.date.desc()).first()
     if latest_journal and "sad" in latest_journal.mood.lower():
-        recs.append(RecommendationOut(
-            id=1002, type="mood", text="We noticed a low mood entry. Try some self-care or journaling today! 😊",
-            date=latest_journal.date
+        add_recommendation(RecommendationOut(
+            id=1002,
+            type="mood",
+            text="We noticed a low mood entry. Try some self-care or journaling today! 😊",
+            date=latest_journal.date,
         ))
 
     # 3. PCOS Checker Data
     latest_pcos = db.query(PCOSCheck).filter(PCOSCheck.user_id == current_user.id).order_by(PCOSCheck.date.desc()).first()
     if latest_pcos and latest_pcos.risk == "High":
-        recs.append(RecommendationOut(
-            id=1003, type="pcos", text="Your recent PCOS check suggests high risk. Consider consulting a specialist. 🩺",
-            date=latest_pcos.date
+        add_recommendation(RecommendationOut(
+            id=1003,
+            type="pcos",
+            text="Your recent PCOS check suggests high risk. Consider consulting a specialist. 🩺",
+            date=latest_pcos.date,
         ))
 
     # Add global recommendations from database
     global_recs = db.query(Recommendation).filter(Recommendation.user_id == None).all()
     for i, global_rec in enumerate(global_recs):
-        recs.append(RecommendationOut(
+        add_recommendation(RecommendationOut(
             id=2000 + i,
             type=global_rec.type,
             text=global_rec.text,
-            date=global_rec.date
+            date=global_rec.date,
         ))
 
-    # If still no recommendations, add some default ones
-    if not recs:
+    # Keep the feed useful even when the user has only a small amount of data.
+    if len(recs) < 5:
         current_time = datetime.utcnow()
-        default_recs = [
-            RecommendationOut(
-                id=3001, type="general", 
-                text="Stay hydrated and listen to your body today.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3002, type="wellness", 
-                text="Your body needs rest — take it slow and breathe.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3003, type="nutrition", 
-                text="Eat fresh, move gently, and love yourself today.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3004, type="mood", 
-                text="Start your day with 5 minutes of gratitude journaling.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3005, type="cycle", 
-                text="Track your cycle regularly to understand your body better.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3006, type="wellness", 
-                text="Try 10 minutes of gentle yoga or stretching to ease tension.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3007, type="nutrition", 
-                text="Include healthy fats like avocado and nuts in your meals today.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3008, type="mood", 
-                text="Connect with a friend or family member for emotional support.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3009, type="wellness", 
-                text="Take a 20-minute walk in nature to boost your mood.",
-                date=current_time
-            ),
-            RecommendationOut(
-                id=3010, type="nutrition", 
-                text="Drink herbal teas like chamomile or peppermint for relaxation.",
-                date=current_time
-            )
-        ]
-        recs.extend(default_recs)
+        for default_rec in build_default_recommendations(current_time):
+            if len(recs) >= 5:
+                break
+            add_recommendation(default_rec)
 
     return recs
 

@@ -91,11 +91,11 @@ OMNIDIM_API_KEY=your_omnidimension_api_key
 - **Database**: The app uses SQLite by default. The database file is `backend/app/shecare.db`.
 - **Run the Backend**:
   ```bash
-  cd backend/app
-  python -m uvicorn main:app --reload
+  cd backend
+  python -m uvicorn app.main:app --reload
   ```
   The API will be available at `http://localhost:8000`.
-  If you prefer to launch from `backend/`, use `python -m uvicorn app.main:app --reload` instead.
+  The same command also works from `backend/app/`.
 
 ### 3. Frontend Setup
 ```bash

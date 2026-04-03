@@ -108,15 +108,12 @@ const PCOSChecker = () => {
   useEffect(() => {
     setLoading(true);
     setError("");
-    const token = localStorage.getItem("shecare_token");
-    api.get("/profile", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
+    api.getProfile()
       .then(res => {
         setFormData(prev => ({
           ...prev,
-          age: res.data.age || "",
-          weight: res.data.weight || ""
+          age: res.age || "",
+          weight: res.weight || ""
         }));
       })
       .catch(() => setError("Failed to load user data."))

@@ -32,10 +32,20 @@ export const loginUser = async (credentials) => {
 // Get current user profile
 export const getProfile = async () => {
   const token = localStorage.getItem("shecare_token");
-  const response = await api.get("/profile", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  });
-  return response.data;
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  try {
+    const response = await api.get("/profile", { headers });
+    return response.data;
+  } catch (error) {
+    const status = error?.response?.status;
+    // Fallback for deployments that expose the profile at /auth/me.
+    if (status === 404 || status === 405) {
+      const fallbackResponse = await api.get("/auth/me", { headers });
+      return fallbackResponse.data;
+    }
+    throw error;
+  }
 };
 
 // PCOS Checker

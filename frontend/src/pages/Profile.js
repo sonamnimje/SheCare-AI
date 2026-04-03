@@ -15,13 +15,10 @@ const Profile = () => {
   useEffect(() => {
     setLoading(true);
     setError("");
-    const token = localStorage.getItem("shecare_token");
-    api.get("/profile", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
+    api.getProfile()
       .then(res => {
-        setProfile({ ...res.data, name: res.data.full_name || "", cycleLength: res.data.cycle_length });
-        setForm({ ...res.data, name: res.data.full_name || "", cycleLength: res.data.cycle_length });
+        setProfile({ ...res, name: res.full_name || "", cycleLength: res.cycle_length });
+        setForm({ ...res, name: res.full_name || "", cycleLength: res.cycle_length });
       })
       .catch(() => setError("Failed to load profile."))
       .finally(() => setLoading(false));
