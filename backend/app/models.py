@@ -3,7 +3,10 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from pydantic import BaseModel
 
-from .database import Base
+try:
+    from .database import Base
+except ImportError:
+    from database import Base
 
 class User(Base):
     __tablename__ = "users"

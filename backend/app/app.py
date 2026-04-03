@@ -21,6 +21,11 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SheCare AI API", version="1.0.0")
 
+try:
+    from .routes import auth, voice_agent
+except ImportError:
+    from routes import auth, voice_agent
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

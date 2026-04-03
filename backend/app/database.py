@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker
 try:
     from .config import settings
 except ImportError:
-    # Try absolute import if relative import fails
     from config import settings
 
 # Create engine based on database type

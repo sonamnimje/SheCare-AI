@@ -23,7 +23,10 @@ import json
 
 app = FastAPI()
 
-from app.routes import auth, voice_agent
+try:
+    from .routes import auth, voice_agent
+except ImportError:
+    from routes import auth, voice_agent
 
 
 @app.get("/")

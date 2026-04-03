@@ -1,9 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import User
-from app.config import settings
+
+try:
+    from ..database import get_db
+    from ..models import User
+    from ..config import settings
+except ImportError:
+    from database import get_db
+    from models import User
+    from config import settings
+
 import smtplib
 from email.mime.text import MIMEText
 from jose import jwt

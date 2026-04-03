@@ -92,9 +92,10 @@ OMNIDIM_API_KEY=your_omnidimension_api_key
 - **Run the Backend**:
   ```bash
   cd backend/app
-  uvicorn app.main:app --reload
+  python -m uvicorn main:app --reload
   ```
   The API will be available at `http://localhost:8000`.
+  If you prefer to launch from `backend/`, use `python -m uvicorn app.main:app --reload` instead.
 
 ### 3. Frontend Setup
 ```bash

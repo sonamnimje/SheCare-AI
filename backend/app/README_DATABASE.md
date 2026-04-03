@@ -26,7 +26,7 @@ For development, SQLite is the easiest option and requires no additional setup:
 
 3. Start the server:
    ```bash
-   uvicorn main:app --reload
+   python -m uvicorn main:app --reload
    ```
 
 ## PostgreSQL Setup

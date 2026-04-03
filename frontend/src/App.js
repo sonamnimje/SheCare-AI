@@ -406,7 +406,7 @@ function App() {
                     </button>
                     <button
                       onClick={() => {
-                        window.open("https://omnidim.io/voice-widget?secret=8b7c769b68400c46338749c7ef868d3e", "_blank");
+                        window.open("https://omnidim.io/web_widget.js?secret_key=6561779da9e4d1df0383c9dae0d26d65", "_blank");
                       }}
                       style={{
                         background: "transparent",
