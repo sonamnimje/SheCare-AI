@@ -26,7 +26,14 @@ const Login = () => {
       setLoading(false);
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.detail || "Login failed.");
+      const backendMessage = err.response?.data?.detail;
+      if (backendMessage) {
+        setError(backendMessage);
+      } else if (err.request) {
+        setError("Cannot reach server. Please try again in a moment.");
+      } else {
+        setError("Login failed.");
+      }
       setLoading(false);
     }
   };

@@ -1,7 +1,26 @@
 import axios from "axios";
 
-// Use environment variable for backend base URL
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8000";
+const normalizeBaseUrl = (value) => (value || "").trim().replace(/\/+$/, "");
+
+const getBaseUrl = () => {
+  const envBaseUrl = normalizeBaseUrl(process.env.REACT_APP_API_BASE_URL);
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    const isLocalHost = host === "localhost" || host === "127.0.0.1";
+    if (!isLocalHost) {
+      // Safe production fallback when env vars are missing during frontend build.
+      return "https://shecare-ai.onrender.com";
+    }
+  }
+
+  return "http://localhost:8000";
+};
+
+const BASE_URL = getBaseUrl();
 
 // Create an axios instance
 const api = axios.create({
