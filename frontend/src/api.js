@@ -1,26 +1,12 @@
 import axios from "axios";
 
-const normalizeBaseUrl = (value) => (value || "").trim().replace(/\/+$/, "");
-
-const getBaseUrl = () => {
-  const envBaseUrl = normalizeBaseUrl(process.env.REACT_APP_API_BASE_URL);
-  if (envBaseUrl) {
-    return envBaseUrl;
-  }
-
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    const isLocalHost = host === "localhost" || host === "127.0.0.1";
-    if (!isLocalHost) {
-      // Safe production fallback when env vars are missing during frontend build.
-      return "https://shecare-ai.onrender.com";
-    }
-  }
-
-  return "http://localhost:8000";
-};
-
-const BASE_URL = getBaseUrl();
+// Prevent production builds from falling back to localhost if env vars are missing.
+const isBrowser = typeof window !== "undefined";
+const isLocalHost =
+  isBrowser && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+const BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  (isLocalHost ? "http://localhost:8000" : "https://shecare-ai.onrender.com");
 
 // Create an axios instance
 const api = axios.create({

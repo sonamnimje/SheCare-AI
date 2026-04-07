@@ -6,6 +6,6 @@ passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 python-dotenv==1.0.0
 email-validator==2.1.0
-bcrypt
+bcrypt==4.0.1
 pg8000==1.31.2
 requests==2.32.3

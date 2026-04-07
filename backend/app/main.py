@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, status, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from jose import JWTError, jwt
@@ -20,6 +21,9 @@ except ImportError:
     from config import settings
 
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -42,7 +46,7 @@ app.include_router(voice_agent.router, prefix="/voice", tags=["voice"])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -129,23 +133,35 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @app.post("/auth/signup", response_model=UserOut)
 def signup(user: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered.")
-    hashed_pw = pwd_context.hash(user.password)
-    db_user = User(
-        email=user.email, 
-        hashed_password=hashed_pw, 
-        full_name=user.full_name,
-        age=user.age,
-        weight=user.weight,
-        cycle_length=user.cycle_length,
-        bio=user.bio
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    try:
+        existing = db.query(User).filter(User.email == user.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered.")
+
+        hashed_pw = pwd_context.hash(user.password)
+        db_user = User(
+            email=user.email,
+            hashed_password=hashed_pw,
+            full_name=user.full_name,
+            age=user.age,
+            weight=user.weight,
+            cycle_length=user.cycle_length,
+            bio=user.bio,
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except HTTPException:
+        raise
+    except SQLAlchemyError as exc:
+        db.rollback()
+        logger.exception("Database error during signup")
+        raise HTTPException(status_code=500, detail="Database error during signup.") from exc
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Unexpected error during signup")
+        raise HTTPException(status_code=500, detail="Unexpected server error during signup.") from exc
 
 class LoginRequest(BaseModel):
     email: EmailStr
